@@ -69,16 +69,19 @@ proc easyText(r: RendererPtr, re: var Rect, label: string): void =
   surf.freeSurface()
   tex.destroy()
 
-proc drawButton(c: var camelia, r: RendererPtr, label: string, action: () -> void): void =  
+proc drawButton(c: var camelia, r: RendererPtr, label: string, action: () -> void, rightSide: int = -1): void =  
   r.setDrawColorUnpacked(FOREGROUND_COLOR)
   c.verticalTracker += VERTICAL_PADDING
   let textWidth = FONT_DEFAULT.textSize(label).w
   var re: Rect = (x: LEFTWARD_ORIGIN, y: c.verticalTracker.cint, w: (TEXT_VERT_DILATION*TEXT_REFIT*textWidth.float).cint, h: (TEXT_REFIT*TEXT_RESOLUTION.float).cint).Rect
-  if isMouseInRect(c, re):
+  var modRe = re
+  if rightSide != -1:
+    modRe.w = rightSide.cint
+  if isMouseInRect(c, modRe):
     r.setDrawColorUnpacked(HIGHLIGHT_COLOR)
     if c.mouse.buttons == 1:
       action()
-  r.fillRect(re)
+  r.fillRect(modRe)
   r.easyText(re, label)
 
 proc drawToggle(c: var camelia, r: RendererPtr, label: string, value: var bool): void =  
@@ -96,7 +99,18 @@ proc drawToggle(c: var camelia, r: RendererPtr, label: string, value: var bool):
   var textRe: Rect = (x: LEFTWARD_ORIGIN+(TEXT_REFIT*TEXT_RESOLUTION.float).cint, y: c.verticalTracker.cint, w: (TEXT_VERT_DILATION*TEXT_REFIT*textWidth.float).cint, h: (TEXT_REFIT*TEXT_RESOLUTION.float).cint).Rect
   r.easyText(textRe, label)
 
-proc drawMutex(c: var camelia, r: RendererPtr, label: string, entries: seq[string]): void =  
+proc drawMutex(c: var camelia, r: RendererPtr, label: string, entries: seq[string], value: var int): void =  
+  r.setDrawColorUnpacked(FOREGROUND_COLOR)
+  c.verticalTracker += VERTICAL_PADDING
+  let textWidth = FONT_DEFAULT.textSize(label).w
+  var re: Rect = (x: LEFTWARD_ORIGIN, y: c.verticalTracker.cint, w: (TEXT_VERT_DILATION*TEXT_REFIT*textWidth.float).cint, h: (TEXT_REFIT*TEXT_RESOLUTION.float).cint).Rect
+  r.easyText(re, label)
+  for ent_idx, ent in entries:
+    var temp: bool = false
+    c.verticalTracker -= VERTICAL_PADDING-(TEXT_REFIT*TEXT_RESOLUTION.float).int
+    c.drawButton(r, entries[ent_idx], () => (temp = true), rightSide = (TEXT_VERT_DILATION*TEXT_REFIT*textWidth.float).int)
+    if temp:
+      value = ent_idx
   discard
 
 proc render*(c: var camelia, r: RendererPtr): void = 
@@ -113,5 +127,8 @@ proc render*(c: var camelia, r: RendererPtr): void =
   var a {.global.}: bool = false
   c.drawToggle(r, fmt"toggle test ({$a})", a)
   c.drawButton(r, "button test (reset toggle to false)", () => (a = false))
+  var b {.global.}: int = 0
+  let choices: seq[string] = @["ayy", "bee", "cee"]
+  c.drawMutex(r, fmt"mutex test ({choices[b]})", choices, b)
 
 ##################################################
